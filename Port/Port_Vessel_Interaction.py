@@ -47,6 +47,8 @@ for file in dir_list:
     if "AIS_2021_07" in file or "AIS_2021_08" in file or "AIS_2021_09" in file:
         # load AIS csv into pandas dataframe
         AIS_data_raw = pd.read_csv(f"../SF_AIS/{file}", encoding="UTF-8")
+        AIS_data_raw["BaseDateTime"] = pd.to_datetime(AIS_data_raw["BaseDateTime"], format="%H:%M:%S")
+        print(AIS_data_raw["BaseDateTime"].dtype)
         # initiate timer for process time
         timer_start = datetime.datetime.now()
         # loop through grid points
@@ -108,12 +110,15 @@ for file in dir_list:
 
             # if the timestamp is greater than an hour from the reference, empty the observation index and capture time
             for minute in min_index:
-                if abs((pd.to_datetime(minute) - pd.to_datetime(min_ref)).total_seconds()) / 60 > 20:
+                if abs((minute - pd.to_datetime(min_ref)).total_seconds()) / 60 > 20:
                     MMSI_index = set()
                     min_ref = minute
 
+                    minlo = minute-pd.Timedelta(seconds=1)
+                    minhi = minute+pd.Timedelta(seconds=1)
+
                 # while looping through the min_index, grab only those values that are the same time
-                temp_df = AIS_data[AIS_data["BaseDateTime"] == minute].reset_index(drop=True)
+                temp_df = AIS_data[(AIS_data["BaseDateTime"] == minlo) | (AIS_data["BaseDateTime"] == minhi) | (AIS_data["BaseDateTime"] == minute)].reset_index(drop=True)
 
                 # loop through the vessels captured and compare to every other vessel
                 if len(temp_df) > 0:
